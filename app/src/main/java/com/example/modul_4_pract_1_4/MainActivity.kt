@@ -1,24 +1,56 @@
 package com.example.modul_4_pract_1_4
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.dp
 import com.example.modul_4_pract_1_4.ui.theme.Modul_4_pract_14Theme
-import kotlinx.coroutines.async
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlin.system.measureTimeMillis
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import kotlin.random.Random
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Button
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.Color
+import com.example.modul_4_pract_1_4.data.Comment
 
+import com.example.modul_4_pract_1_4.data.LoadState
+import com.example.modul_4_pract_1_4.data.PostWithData
+import com.example.modul_4_pract_1_4.data.SocialPost
+import com.example.modul_4_pract_1_4.data.SocialRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 
 
 class MainActivity : ComponentActivity() {
-
-    private val TAG = "MainActivity"
+    private val repository by lazy { SocialRepository(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,126 +58,328 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             Modul_4_pract_14Theme {
+                SocialFeedScreen(repository)
             }
         }
-
-        loadAllData()
     }
-
-    fun loadAllData() {
-        val time = measureTimeMillis {
-            runBlocking {
-
-                val usersDeferred = async {
-                    try {
-                        LoadUsers()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки пользователей: ${e.message}")
-                        emptyList<String>()
-                    }
-                }
-                val salesDeferred = async {
-                    try {
-                        LoadSales()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки продаж: ${e.message}")
-                        emptyMap<String, Int>()
-                    }
-                }
-
-                val weatherDeferred = async {
-                    try {
-                        LoadWeather()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Ошибка загрузки погоды: ${e.message}")
-                        emptyList<String>()
-                    }
-                }
-
-                val users = usersDeferred.await()
-                val sales = salesDeferred.await()
-                val weather = weatherDeferred.await()
-
-                Log.d(TAG, "Пользователи: $users")
-                Log.d(TAG, "Продажи: $sales")
-                Log.d(TAG, "Погода: $weather")
-
-            }
-        }
-        Log.d(TAG, "Общее время выполнения: ${time / 1000.0} секунд")
-
-
-    }
-    suspend fun LoadUsers():List<String>{
-        delay(1800)
-
-        if (Random.nextFloat() < 0.7f) {
-            throw Exception("Ошибка соединения при загрузке пользователей")
-        }
-
-        val jsonString = loadJsonFromAssets("users.json")
-        val listType = object : TypeToken<List<User>>() {}.type
-        val users: List<User> = Gson().fromJson(jsonString, listType)
-        val names = users.map { it.name }
-        return names
-    }
-
-    suspend fun LoadSales():Map<String, Int>{
-        delay(1200)
-
-        if (Random.nextFloat() < 0.2f) {
-            throw Exception("Ошибка сервера при загрузке продаж")
-        }
-
-        val jsonString = loadJsonFromAssets("sales.json")
-        val salesData: SalesData = Gson().fromJson(jsonString, SalesData::class.java)
-        val salesMap = salesData.items.associate { it.product to it.qty }
-        return salesMap
-
-    }
-
-    suspend fun LoadWeather():List<String>{
-        delay(2500)
-
-        if (Random.nextFloat() < 0.2f) {
-            throw Exception("Таймаут при загрузке погоды")
-        }
-
-        val jsonString = loadJsonFromAssets("weather.json")
-        val listType = object : TypeToken<List<Weather>>() {}.type
-        val weatherList: List<Weather> = Gson().fromJson(jsonString, listType)
-        val weatherStrings = weatherList.map { "${it.city}: ${it.temp}°C" }
-        return weatherStrings
-    }
-
-
-    private fun loadJsonFromAssets(filename: String): String {
-        return assets.open(filename).bufferedReader().use { it.readText() }
-    }
-
-
-    data class User(
-        val id: Int,
-        val name: String
-    )
-    data class SaleItem(
-        val product: String,
-        val qty: Int,
-        val revenue: Int
-    )
-
-    data class SalesData(
-        val today: String,
-        val items: List<SaleItem>
-    )
-    data class Weather(
-        val city: String,
-        val temp: Int,
-        val condition: String
-    )
-
 }
 
 
+@Composable
+fun SocialFeedScreen(repository: SocialRepository) {
+    var posts by remember { mutableStateOf<List<SocialPost>>(emptyList()) }
+    var postsWithData by remember { mutableStateOf<List<PostWithData>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+    var loadJob by remember { mutableStateOf<Job?>(null) }
 
 
+
+    fun launchPostDataLoading(
+        postData: PostWithData,
+        repo: SocialRepository
+    ) {
+        coroutineScope.launch {
+            try {
+                val avatarDeferred = async {
+                    try {
+                        val color = repo.loadAvatar(postData.post.avatarurl)
+
+                        PostWithData(
+                            post = postData.post,
+                            avatarColor = color,
+                            avatarState = LoadState.SUCCESS,
+                            comments = postData.comments,
+                            commentsState = postData.commentsState
+                        )
+                    } catch (e: Exception) {
+                        postData.copy(avatarState = LoadState.ERROR)
+                    }
+                }
+
+                val commentsDeferred = async {
+                    try {
+                        val comments = repo.loadComments(postData.post.id)
+                        PostWithData(
+                            post = postData.post,
+                            avatarColor = postData.avatarColor,
+                            avatarState = postData.avatarState,
+                            comments = comments,
+                            commentsState = LoadState.SUCCESS
+                        )
+                    } catch (e: Exception) {
+                        postData.copy(commentsState = LoadState.ERROR)
+                    }
+                }
+
+                val avatarResult = avatarDeferred.await()
+                val commentsResult = commentsDeferred.await()
+
+                val updatedPostData = PostWithData(
+                    post = postData.post,
+                    avatarColor = avatarResult.avatarColor,
+                    avatarState = avatarResult.avatarState,
+                    comments = commentsResult.comments,
+                    commentsState = commentsResult.commentsState
+                )
+
+
+                // Обновляем UI только один раз, когда всё готово
+                postsWithData = postsWithData.map {
+                    if (it.post.id == updatedPostData.post.id) {
+                        updatedPostData
+                    } else {
+                        it
+                    }
+                }
+
+            } catch (e: Exception) {
+                println("Ошибка загрузки данных поста: ${e.message}")
+            }
+        }
+    }
+
+
+    fun loadPosts(repo: SocialRepository) {
+        loadJob?.cancel()
+        loadJob = coroutineScope.launch {
+            isLoading = true
+            postsWithData = emptyList()
+
+            try {
+                val loadedPosts = withContext(Dispatchers.IO) {
+                    repo.loadPosts()
+                }
+                posts = loadedPosts
+
+                postsWithData = loadedPosts.map { post ->
+                    PostWithData(
+                        post = post,
+                        avatarState = LoadState.LOADING,
+                        commentsState = LoadState.LOADING
+                    )
+                }
+
+                postsWithData.forEach { postData ->
+                    launchPostDataLoading(postData, repo)
+                }
+
+            } catch (e: Exception) {
+                println("Ошибка загрузки постов: ${e.message}")
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    // загрузка постов при запуске
+    LaunchedEffect(Unit) {
+        loadPosts(repository)
+    }
+
+    fun refresh() {
+        loadJob?.cancel()
+        loadPosts(repository)
+    }
+
+
+    Column(
+        modifier = Modifier.fillMaxSize()
+            .padding(top = 25.dp)
+    ) {
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Социальная лента \nи точка",
+
+                style = MaterialTheme.typography.headlineSmall
+            )
+
+            Button(onClick = { refresh() }) {
+                Text("Обновить")
+            }
+        }
+
+        if (isLoading && postsWithData.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(postsWithData) { postData ->
+                    PostCard(postData)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun PostCard(postData: PostWithData) {
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                when (postData.avatarState) {
+                    LoadState.LOADING -> {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(4.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                    LoadState.SUCCESS -> {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(4.dp)
+                                .background(
+                                    color = Color(
+                                        android.graphics.Color.parseColor(
+                                            postData.avatarColor ?: "#CCCCCC"
+                                        )
+                                    )
+                                )
+                        )
+                    }
+                    LoadState.ERROR -> {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .padding(4.dp)
+                                .background(Color.Red),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("!", color = Color.White)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(30.dp))
+
+
+                Text(
+                    text = postData.post.title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+            }
+            Text(
+                text = "Пользователь ${postData.post.userid}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = postData.post.body,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            when (postData.commentsState) {
+                LoadState.LOADING -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 1.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Загрузка комментариев...",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                LoadState.SUCCESS -> {
+                    if (postData.comments.isNotEmpty()) {
+                        Text(
+                            text = "Комментарии (${postData.comments.size}):",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+
+                        postData.comments.take(3).forEach { comment ->
+                            CommentItem(comment)
+                        }
+                    } else {
+                        Text(
+                            text = "Нет комментариев",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                LoadState.ERROR -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(16.dp)
+                                .background(Color.Red, shape = MaterialTheme.shapes.small),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "!",
+                                color = Color.White,
+                                fontSize = MaterialTheme.typography.bodySmall.fontSize
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Ошибка загрузки комментариев",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Red
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CommentItem(comment: Comment) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 8.dp, top = 4.dp)
+    ) {
+        Text(
+            text = comment.name,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = comment.body,
+            style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
