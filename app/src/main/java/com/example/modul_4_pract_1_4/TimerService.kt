@@ -1,4 +1,4 @@
-package com.example.modul_4_pract_1_4
+package com.example.modul_4_pract_1_4.old_pract
 
 
 import android.app.NotificationChannel
@@ -41,7 +41,7 @@ class TimerService : Service()  {
 
                 updateNotification(secondsElapsed)
 
-                // отправляем broadcast с указанием пакета
+                // Отправляем broadcast с указанием пакета
                 val intent = Intent(TIMER_UPDATE_ACTION).apply {
                     putExtra(TIMER_VALUE_EXTRA, secondsElapsed)
                     setPackage(packageName)

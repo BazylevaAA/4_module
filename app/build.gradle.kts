@@ -43,6 +43,8 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
     implementation("androidx.compose.foundation:foundation-layout")
     implementation("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
+    implementation("androidx.work:work-runtime-ktx:2.10.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
 
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.3.9")
@@ -55,6 +57,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.appcompat)
+    implementation(libs.androidx.work.runtime.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
