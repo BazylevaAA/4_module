@@ -46,9 +46,9 @@
             android:exported="false"
             android:foregroundServiceType="shortService"/>
 
-        <receiver android:name=".ReminderReceiver" android:exported="false" />
+        <receiver android:name=".old_pract.ReminderReceiver" android:exported="false" />
 
-        <receiver android:name=".BootReceiver" android:exported="true">
+        <receiver android:name=".old_pract.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
