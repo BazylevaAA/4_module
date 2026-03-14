@@ -19,6 +19,7 @@ class OneTimeTimerService : Service() {
     companion object {
         const val EXTRA_SECONDS = "extra_seconds"
         const val TIMER_FINISHED_ACTION = "com.example.modul_4_pract_1_4.TIMER_FINISHED"
+        const val TAG = "OneTimeTimer"
     }
 
     override fun onBind(intent: Intent): IBinder? = null
@@ -36,9 +37,10 @@ class OneTimeTimerService : Service() {
         timerJob = serviceScope.launch {
             delay(seconds * 1000L)
 
-            // уведомление о завершении
+            // Показываем уведомление о завершении
             showCompletionNotification()
 
+            // Отправляем broadcast, чтобы сбросить состояние в UI
             val finishedIntent = Intent(TIMER_FINISHED_ACTION).apply {
                 setPackage(packageName)
             }
