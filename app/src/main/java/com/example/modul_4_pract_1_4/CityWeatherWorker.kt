@@ -1,4 +1,4 @@
-package com.example.modul_4_pract_1_4
+package com.example.modul_4_pract_1_4.old_pract
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -41,6 +41,7 @@ class CityWeatherWorker(
                             "stage" to "Загрузка $city"
                         )
                     )
+
                 }
 
                 val weather = WeatherData(
