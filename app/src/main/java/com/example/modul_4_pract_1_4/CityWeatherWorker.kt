@@ -1,6 +1,5 @@
 package com.example.modul_4_pract_1_4
 
-
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -12,13 +11,10 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 
-
-
 class CityWeatherWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
-
 
     override suspend fun doWork(): Result {
         val foregroundInfo = NotificationHelper.createForegroundInfo(
@@ -28,18 +24,15 @@ class CityWeatherWorker(
         )
         setForegroundAsync(foregroundInfo)
 
-
         return withContext(Dispatchers.IO) {
             try {
                 val city = inputData.getString("city") ?: "Unknown"
                 val cityIndex = inputData.getInt("city_index", 0)
 
-
                 val totalSteps = 10
                 for (i in 1..totalSteps) {
                     delay(300)
                     val progress = (i * 100) / totalSteps
-
 
                     setProgressAsync(
                         workDataOf(
@@ -50,7 +43,6 @@ class CityWeatherWorker(
                     )
                 }
 
-
                 val weather = WeatherData(
                     city = city,
                     temperature = Random.nextInt(-25, 25),
@@ -58,7 +50,6 @@ class CityWeatherWorker(
                     humidity = Random.nextInt(40, 90),
                     windSpeed = Random.nextInt(0, 15)
                 )
-
 
                 val outputData = workDataOf(
                     "city_$cityIndex" to weather.city,
@@ -69,9 +60,7 @@ class CityWeatherWorker(
                     "city_index" to cityIndex
                 )
 
-
                 Result.success(outputData)
-
 
             } catch (e: Exception) {
                 Result.failure(workDataOf("error" to e.message))
